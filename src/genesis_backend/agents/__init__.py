@@ -11,6 +11,7 @@ from .django_agent import DjangoAgent
 from .nestjs_agent import NestJSAgent
 
 # DatabaseAgent and AuthAgent live in the generators package
+
 from ..generators.database import DatabaseAgent
 from ..generators.auth_agent import AuthAgent
 
