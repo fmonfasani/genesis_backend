@@ -351,14 +351,14 @@ pre-commit install
 ### Code Quality
 ```bash
 # Format code
-black src/ tests/
-isort src/ tests/
+black agents/ generators/ tests/
+isort agents/ generators/ tests/
 
 # Type checking
-mypy src/
+mypy agents/ generators/
 
 # Linting
-flake8 src/ tests/
+flake8 agents/ generators/ tests/
 
 # Run all quality checks
 make quality
