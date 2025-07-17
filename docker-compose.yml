@@ -1,0 +1,242 @@
+# Genesis Backend - Docker Compose for Development
+# Provides complete development environment with databases and services
+
+version: '3.8'
+
+services:
+  # Genesis Backend application
+  genesis-backend:
+    build:
+      context: .
+      target: development
+      dockerfile: Dockerfile
+    container_name: genesis-backend-dev
+    volumes:
+      - .:/app
+      - /app/.venv  # Exclude virtual environment
+      - genesis-backend-cache:/app/.cache
+    environment:
+      - PYTHONPATH=/app/src
+      - GENESIS_ENV=development
+      - DATABASE_URL=postgresql://genesis:genesis@postgres:5432/genesis_db
+      - REDIS_URL=redis://redis:6379/0
+      - MONGODB_URL=mongodb://mongo:27017/genesis_db
+    depends_on:
+      - postgres
+      - redis
+      - mongo
+    ports:
+      - "8000:8000"
+    networks:
+      - genesis-network
+    restart: unless-stopped
+    command: tail -f /dev/null  # Keep container running for development
+
+  # PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    container_name: genesis-postgres
+    environment:
+      POSTGRES_DB: genesis_db
+      POSTGRES_USER: genesis
+      POSTGRES_PASSWORD: genesis
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - genesis-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U genesis -d genesis_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching and sessions
+  redis:
+    image: redis:7-alpine
+    container_name: genesis-redis
+    volumes:
+      - redis-data:/data
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    ports:
+      - "6379:6379"
+    networks:
+      - genesis-network
+    restart: unless-stopped
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # MongoDB for document storage
+  mongo:
+    image: mongo:7
+    container_name: genesis-mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: genesis
+      MONGO_INITDB_DATABASE: genesis_db
+    volumes:
+      - mongo-data:/data/db
+      - ./docker/mongo/init.js:/docker-entrypoint-initdb.d/init.js:ro
+    ports:
+      - "27017:27017"
+    networks:
+      - genesis-network
+    restart: unless-stopped
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # MySQL for additional testing
+  mysql:
+    image: mysql:8.0
+    container_name: genesis-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: genesis
+      MYSQL_DATABASE: genesis_db
+      MYSQL_USER: genesis
+      MYSQL_PASSWORD: genesis
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "3306:3306"
+    networks:
+      - genesis-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "genesis", "-pgenesis"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Testing environment
+  genesis-test:
+    build:
+      context: .
+      target: testing
+      dockerfile: Dockerfile
+    container_name: genesis-backend-test
+    volumes:
+      - .:/app
+      - genesis-test-cache:/app/.cache
+    environment:
+      - PYTHONPATH=/app/src
+      - GENESIS_ENV=testing
+      - DATABASE_URL=postgresql://genesis:genesis@postgres:5432/genesis_test_db
+      - REDIS_URL=redis://redis:6379/1
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - genesis-network
+    profiles:
+      - testing
+    command: pytest tests/ -v --cov=genesis_backend
+
+  # Documentation server
+  docs:
+    build:
+      context: .
+      target: docs
+      dockerfile: Dockerfile
+    container_name: genesis-docs
+    volumes:
+      - ./docs:/app/docs
+      - ./README.md:/app/README.md:ro
+      - ./CHANGELOG.md:/app/CHANGELOG.md:ro
+    ports:
+      - "8080:8080"
+    networks:
+      - genesis-network
+    profiles:
+      - docs
+    restart: unless-stopped
+
+  # Examples runner
+  examples:
+    build:
+      context: .
+      target: examples
+      dockerfile: Dockerfile
+    container_name: genesis-examples
+    volumes:
+      - ./examples:/app/examples
+      - examples-output:/app/examples/output
+    environment:
+      - PYTHONPATH=/app/src
+      - GENESIS_ENV=development
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - genesis-network
+    profiles:
+      - examples
+
+  # Development tools
+  dev-tools:
+    image: python:3.11-slim
+    container_name: genesis-dev-tools
+    volumes:
+      - .:/app
+    working_dir: /app
+    environment:
+      - PYTHONPATH=/app/src
+    command: tail -f /dev/null
+    networks:
+      - genesis-network
+    profiles:
+      - tools
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  mongo-data:
+    driver: local
+  mysql-data:
+    driver: local
+  genesis-backend-cache:
+    driver: local
+  genesis-test-cache:
+    driver: local
+  examples-output:
+    driver: local
+
+networks:
+  genesis-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Development helper services
+x-development: &development-config
+  volumes:
+    - .:/app
+  environment:
+    - PYTHONPATH=/app/src
+    - GENESIS_ENV=development
+  networks:
+    - genesis-network
+
+# Quick development commands:
+# docker-compose up -d                    # Start all services
+# docker-compose up -d postgres redis     # Start only databases
+# docker-compose --profile testing up     # Start with testing
+# docker-compose --profile docs up        # Start with documentation
+# docker-compose --profile examples up    # Start with examples
+# docker-compose exec genesis-backend bash # Access development container
+# docker-compose logs -f genesis-backend  # View logs
+# docker-compose down -v                  # Stop and remove volumes

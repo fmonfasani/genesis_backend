@@ -1,0 +1,293 @@
+# Pre-commit configuration for Genesis Backend
+# Install with: pre-commit install
+
+repos:
+  # Black - Python code formatter
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        language_version: python3
+        args: [--line-length=88]
+        files: ^(src/|tests/|examples/).*\.py$
+
+  # isort - Import sorting
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--profile=black, --line-length=88]
+        files: ^(src/|tests/|examples/).*\.py$
+
+  # flake8 - Python linting
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        args: [--max-line-length=88, --extend-ignore=E203,W503,E501]
+        files: ^(src/|tests/|examples/).*\.py$
+
+  # mypy - Static type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        args: [--config-file=pyproject.toml]
+        files: ^src/genesis_backend/.*\.py$
+        additional_dependencies: [types-all]
+
+  # Standard pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # General file checks
+      - id: trailing-whitespace
+        exclude: ^.*\.(md|rst)$
+      - id: end-of-file-fixer
+        exclude: ^.*\.(md|rst)$
+      - id: check-yaml
+        exclude: ^.*\.github/.*\.yml$
+      - id: check-toml
+      - id: check-json
+      - id: check-xml
+      
+      # Python-specific checks
+      - id: check-ast
+        files: ^(src/|tests/|examples/).*\.py$
+      - id: check-builtin-literals
+        files: ^(src/|tests/|examples/).*\.py$
+      - id: check-docstring-first
+        files: ^src/.*\.py$
+      - id: debug-statements
+        files: ^(src/|tests/|examples/).*\.py$
+      - id: name-tests-test
+        files: ^tests/.*\.py$
+        
+      # Security checks
+      - id: check-merge-conflict
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      
+      # File size and encoding
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  # Security scanning with bandit
+  - repo: https://github.com/pycqa/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        args: [-r, -f, json, -o, bandit-report.json]
+        files: ^src/.*\.py$
+        exclude: ^tests/.*$
+
+  # Documentation checks
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.3.0
+    hooks:
+      - id: pydocstyle
+        files: ^src/genesis_backend/.*\.py$
+        args: [--convention=google, --add-ignore=D100,D104,D105,D107]
+
+  # YAML formatting
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        types: [yaml]
+        exclude: ^.*\.github/.*\.yml$
+
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.38.0
+    hooks:
+      - id: markdownlint
+        args: [--fix]
+        exclude: ^(CHANGELOG\.md|docs/.*\.md)$
+
+  # Check requirements files
+  - repo: https://github.com/pycqa/pip-audit
+    rev: v2.6.1
+    hooks:
+      - id: pip-audit
+        args: [--require-hashes, --disable-pip]
+
+  # Local hooks for project-specific checks
+  - repo: local
+    hooks:
+      # Genesis Backend specific checks
+      - id: check-agent-imports
+        name: Check agent imports
+        entry: python
+        language: system
+        args:
+          - -c
+          - |
+            import sys
+            import ast
+            
+            def check_agent_imports(filename):
+                with open(filename) as f:
+                    content = f.read()
+                    tree = ast.parse(content)
+                    
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.ImportFrom):
+                        # Check for direct LLM imports (should use MCPturbo)
+                        if node.module and any(llm in node.module for llm in ['openai', 'anthropic', 'cohere']):
+                            print(f"❌ Direct LLM import found in {filename}: {node.module}")
+                            print("   Use MCPturbo protocol instead")
+                            return False
+                return True
+            
+            for filename in sys.argv[1:]:
+                if not check_agent_imports(filename):
+                    sys.exit(1)
+        files: ^src/genesis_backend/agents/.*\.py$
+        pass_filenames: true
+
+      - id: check-config-enums
+        name: Check configuration enums
+        entry: python
+        language: system
+        args:
+          - -c
+          - |
+            import sys
+            import ast
+            
+            def check_enum_values(filename):
+                with open(filename) as f:
+                    content = f.read()
+                    
+                # Check that enum values are lowercase
+                if 'class BackendFramework(Enum):' in content:
+                    lines = content.split('\n')
+                    for i, line in enumerate(lines):
+                        if '=' in line and line.strip().endswith('"'):
+                            value = line.split('=')[1].strip().strip('"')
+                            if value != value.lower():
+                                print(f"❌ Enum value should be lowercase in {filename}:{i+1}: {value}")
+                                return False
+                return True
+            
+            for filename in sys.argv[1:]:
+                if not check_enum_values(filename):
+                    sys.exit(1)
+        files: ^src/genesis_backend/config\.py$
+        pass_filenames: true
+
+      - id: check-test-naming
+        name: Check test naming conventions
+        entry: python
+        language: system
+        args:
+          - -c
+          - |
+            import sys
+            import re
+            
+            def check_test_naming(filename):
+                with open(filename) as f:
+                    content = f.read()
+                    
+                # Check test class naming
+                test_classes = re.findall(r'class (Test\w+)', content)
+                for class_name in test_classes:
+                    if not class_name.startswith('Test'):
+                        print(f"❌ Test class should start with 'Test': {class_name}")
+                        return False
+                        
+                # Check test method naming
+                test_methods = re.findall(r'def (test_\w+)', content)
+                for method_name in test_methods:
+                    if not method_name.startswith('test_'):
+                        print(f"❌ Test method should start with 'test_': {method_name}")
+                        return False
+                        
+                return True
+            
+            for filename in sys.argv[1:]:
+                if not check_test_naming(filename):
+                    sys.exit(1)
+        files: ^tests/.*\.py$
+        pass_filenames: true
+
+      - id: check-docstring-coverage
+        name: Check docstring coverage
+        entry: python
+        language: system
+        args:
+          - -c
+          - |
+            import sys
+            import ast
+            
+            def check_docstrings(filename):
+                with open(filename) as f:
+                    content = f.read()
+                    tree = ast.parse(content)
+                    
+                missing_docstrings = []
+                
+                for node in ast.walk(tree):
+                    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                        # Skip private methods and test methods
+                        if node.name.startswith('_') or node.name.startswith('test_'):
+                            continue
+                            
+                        # Check if docstring exists
+                        if not (node.body and isinstance(node.body[0], ast.Expr) 
+                                and isinstance(node.body[0].value, ast.Constant)
+                                and isinstance(node.body[0].value.value, str)):
+                            missing_docstrings.append(f"{type(node).__name__} '{node.name}' at line {node.lineno}")
+                
+                if missing_docstrings:
+                    print(f"❌ Missing docstrings in {filename}:")
+                    for item in missing_docstrings[:5]:  # Show first 5
+                        print(f"   {item}")
+                    if len(missing_docstrings) > 5:
+                        print(f"   ... and {len(missing_docstrings) - 5} more")
+                    return False
+                    
+                return True
+            
+            for filename in sys.argv[1:]:
+                if not check_docstrings(filename):
+                    sys.exit(1)
+        files: ^src/genesis_backend/.*\.py$
+        pass_filenames: true
+
+# Configuration
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: []
+  submodules: false
+
+# Exclude patterns
+exclude: |
+  (?x)^(
+      \.git/.*|
+      \.venv/.*|
+      venv/.*|
+      build/.*|
+      dist/.*|
+      \.eggs/.*|
+      .*\.egg-info/.*|
+      __pycache__/.*|
+      \.pytest_cache/.*|
+      \.mypy_cache/.*|
+      node_modules/.*|
+      generated_output/.*|
+      test_output/.*
+  )$

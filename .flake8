@@ -1,0 +1,160 @@
+[flake8]
+# Flake8 configuration for Genesis Backend
+
+# Maximum line length
+max-line-length = 88
+
+# Ignore specific error codes
+extend-ignore = 
+    # Black compatibility
+    E203,  # Whitespace before ':'
+    W503,  # Line break before binary operator
+    E501,  # Line too long (handled by black)
+    
+    # Docstring related (handled by pydocstyle)
+    D100,  # Missing docstring in public module
+    D104,  # Missing docstring in public package
+    D105,  # Missing docstring in magic method
+    D107,  # Missing docstring in __init__
+    
+    # Import related
+    F401,  # Module imported but unused (in __init__.py files)
+    
+    # Other
+    B008,  # Do not perform function calls in argument defaults
+    C901,  # Function is too complex (handled by complexity check)
+
+# Exclude directories and files
+exclude = 
+    .git,
+    __pycache__,
+    .tox,
+    .eggs,
+    *.egg,
+    build,
+    dist,
+    .venv,
+    venv,
+    env,
+    ENV,
+    .pytest_cache,
+    .mypy_cache,
+    .coverage,
+    htmlcov,
+    docs/_build,
+    generated_output,
+    test_output
+
+# Per-file ignores
+per-file-ignores =
+    # __init__.py files can have unused imports
+    __init__.py:F401,E402
+    
+    # Test files can have long lines, unused imports, and redefined names
+    tests/*:E501,F401,F811,F841
+    test_*.py:E501,F401,F811,F841
+    conftest.py:F401,F811
+    
+    # Example files can have unused imports and print statements
+    examples/*:F401,T201,E501
+    
+    # Configuration files
+    setup.py:F401,E402
+    config.py:E501
+    
+    # Generated files
+    *_pb2.py:E501,F401
+    
+    # Scripts
+    scripts/*:T201,E501
+
+# Import order style
+import-order-style = google
+
+# Application import names
+application-import-names = genesis_backend
+
+# Maximum complexity
+max-complexity = 12
+
+# Maximum function length
+max-function-length = 50
+
+# Maximum class length  
+max-class-length = 200
+
+# Docstring conventions
+docstring-convention = google
+
+# Enable specific checks
+select = 
+    E,   # pycodestyle errors
+    W,   # pycodestyle warnings
+    F,   # pyflakes
+    I,   # isort
+    N,   # pep8-naming
+    B,   # flake8-bugbear
+    C,   # mccabe complexity
+    T,   # flake8-print
+
+# Inline ignore format
+inline-quotes = double
+
+# Statistics
+statistics = True
+count = True
+
+# Show source code for each error
+show-source = True
+
+# Format output
+format = %(path)s:%(row)d:%(col)d: %(code)s %(text)s
+
+# Enable color output
+color = auto
+
+# Benchmarks
+benchmark = False
+
+# Tee output to file
+tee = False
+
+# Configuration for specific plugins
+
+# flake8-docstrings
+strictness = short
+docstring-style = google
+
+# flake8-import-order
+import-order-style = google
+
+# flake8-bugbear
+extend-immutable-calls = 
+    fastapi.Depends,
+    fastapi.Query,
+    fastapi.Path,
+    fastapi.Body,
+    fastapi.Header,
+    fastapi.Cookie,
+    fastapi.File,
+    fastapi.Form
+
+# flake8-comprehensions
+comprehensions-check-all = True
+
+# flake8-quotes
+inline-quotes = "
+multiline-quotes = """
+docstring-quotes = """
+avoid-escape = True
+
+# flake8-annotations
+mypy-init-return = True
+suppress-none-returning = True
+suppress-dummy-args = True
+
+# flake8-bandit
+hardcoded-tmp-directory = 
+    /tmp,
+    /var/tmp,
+    /dev/shm
