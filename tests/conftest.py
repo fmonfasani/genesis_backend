@@ -1,6 +1,6 @@
-"""
-Test configuration and fixtures for Genesis Backend tests.
-"""
+"""Test configuration and fixtures for Genesis Backend tests."""
+
+pytest_plugins = ["pytest_asyncio"]
 
 import pytest
 import asyncio

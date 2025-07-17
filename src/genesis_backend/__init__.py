@@ -1,10 +1,12 @@
-"""
-Genesis Backend - Backend Code Generation Agents
+"""Genesis Backend - Backend Code Generation Agents."""
 
-Specialized agents for generating backend code using LLMs.
-Part of the Genesis Engine ecosystem.
-"""
+import sys
+from pathlib import Path
 
+# Ensure local stub packages are importable when running from source
+sys.path.append(str(Path(__file__).resolve().parent))
+
+# Project metadata
 __version__ = "1.0.0"
 __author__ = "Genesis Engine Team"
 
