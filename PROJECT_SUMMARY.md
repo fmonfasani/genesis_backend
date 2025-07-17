@@ -38,25 +38,24 @@ genesis-backend/
 │       └── mysql/init.sql          # MySQL setup
 │
 ├── 📦 Source Code
-│   └── src/genesis_backend/
-│       ├── __init__.py             # Package exports and API
-│       ├── config.py               # Configuration classes and enums
-│       │
-│       ├── agents/                 # AI Agents for code generation
-│       │   ├── __init__.py         # Agent exports
-│       │   ├── architect.py        # Architecture design agent
-│       │   ├── fastapi_agent.py    # FastAPI generation agent
-│       │   ├── django_agent.py     # Django generation agent
-│       │   ├── nestjs_agent.py     # NestJS generation agent
-│       │   ├── database_agent.py   # Database design agent
-│       │   └── auth_agent.py       # Authentication agent
-│       │
-│       └── generators/             # Code generators and utilities
-│           ├── __init__.py         # Generator exports
-│           ├── backend_generator.py # Main backend generator
-│           ├── api_generator.py    # API endpoint generator
-│           ├── model_generator.py  # Data model generator
-│           └── auth_generator.py   # Authentication generator
+│   ├── __init__.py             # Package exports and API
+│   ├── config.py               # Configuration classes and enums
+│   │
+│   ├── agents/                 # AI Agents for code generation
+│   │   ├── __init__.py         # Agent exports
+│   │   ├── architect.py        # Architecture design agent
+│   │   ├── fastapi_agent.py    # FastAPI generation agent
+│   │   ├── django_agent.py     # Django generation agent
+│   │   ├── nestjs_agent.py     # NestJS generation agent
+│   │   ├── database_agent.py   # Database design agent
+│   │   └── auth_agent.py       # Authentication agent
+│   │
+│   └── generators/             # Code generators and utilities
+│       ├── __init__.py         # Generator exports
+│       ├── backend_generator.py # Main backend generator
+│       ├── api_generator.py    # API endpoint generator
+│       ├── model_generator.py  # Data model generator
+│       └── auth_generator.py   # Authentication generator
 │
 ├── 🧪 Tests
 │   ├── conftest.py                 # Test configuration and fixtures
@@ -71,7 +70,7 @@ genesis-backend/
 
 ## 🛠️ Core Components
 
-### 1. AI Agents (`src/genesis_backend/agents/`)
+### 1. AI Agents (`genesis_backend/agents/`)
 
 **Purpose**: Specialized AI agents that use LLMs to generate backend code intelligently.
 
@@ -88,7 +87,7 @@ genesis-backend/
 - Production-ready code generation
 - Error handling and validation
 
-### 2. Code Generators (`src/genesis_backend/generators/`)
+### 2. Code Generators (`genesis_backend/generators/`)
 
 **Purpose**: Utilities that coordinate agents and generate complete applications.
 
@@ -103,7 +102,7 @@ genesis-backend/
 - Multi-agent coordination
 - File organization and structure
 
-### 3. Configuration System (`src/genesis_backend/config.py`)
+### 3. Configuration System (`genesis_backend/config.py`)
 
 **Purpose**: Comprehensive configuration management with validation.
 
