@@ -1,0 +1,13 @@
+# .github/ISSUE_TEMPLATE/cross-repo-issue.yml
+name: Cross-Repository Issue
+description: Issue that affects multiple repositories
+body:
+  - type: checkboxes
+    id: affected-repos
+    attributes:
+      label: Affected Repositories
+      options:
+        - label: genesis-engine-core
+        - label: genesis-engine-cli
+        - label: genesis-engine-agents
+        - label: genesis-engine-web
